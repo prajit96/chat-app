@@ -113,6 +113,7 @@ body {
   background-color: #fff;
   border: 1px solid #ddd;
   border-radius: 8px;
+  scroll-behavior: smooth;
 }
 
 .message {
@@ -132,7 +133,7 @@ body {
 
 .their-message {
   align-self: flex-start;
-  background-color: #e0e0e0;
+  background-color: #f6dfdf;
   color: #000;
   border-top-left-radius: 0;
 }
@@ -272,9 +273,9 @@ body {
   white-space: nowrap;
   overflow: hidden;
   position: fixed;
-  top: 20px; /* Adjust position on the page */
+  top: 5px; /* Adjust position on the page */
   left: 0;
-  width: 40%;
+  width: 60%;
   background-color: #69d06d; /* Background color for the message */
   color: white;
   font-size: 20px;
