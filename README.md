@@ -2,6 +2,8 @@
 
 A real-time chat application built using React, Node.js, Express, and Socket.IO, with a backend hosted on Render. This application allows users to exchange messages in real-time with a user-friendly interface.
 
+      -   Backend: https://github.com/prajit96/chat-app-backend.git
+
 Table of Contents
 
 **Features**
