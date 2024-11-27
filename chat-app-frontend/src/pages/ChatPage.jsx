@@ -4,36 +4,60 @@ import { io } from 'socket.io-client';
 import Header from '../components/Layout/Header';
 import Sidebar from '../components/Layout/Sidebar';
 
-const socket = io('https://chat-app-backend-0idm.onrender.com'); // Connect to the backend Socket.IO server
+const socket = io('https://chat-app-backend-0idm.onrender.com'); 
 
 const ChatPage = () => {
-  // Get authentication state from context
   const [contacts, setContacts] = useState([]);
   const [selectedContact, setSelectedContact] = useState(null);
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
+  const [currentUser, setCurrentUser] = useState(null);
 
+  // Fetch user details and contacts on mount
   useEffect(() => {
-    fetchContacts();
+    const fetchUserData = async () => {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      try {
+        const { data } = await axios.get('https://chat-app-backend-0idm.onrender.com/api/user', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setCurrentUser(data.user);
+        fetchContacts(); // Fetch contacts after user data is available
+      } catch (error) {
+        console.error('Error fetching user data:', error.message);
+      }
+    };
+
+    fetchUserData();
   }, []);
 
+  // Set up real-time chat functionality
   useEffect(() => {
     if (selectedContact) {
       fetchMessages(selectedContact._id);
-      socket.emit('joinChat', { chatId: selectedContact._id }); // Join the chat room
+      socket.emit('joinChat', selectedContact._id);
     }
+
+    return () => {
+      if (selectedContact) {
+        socket.emit('leaveChat', selectedContact._id);
+      }
+    };
   }, [selectedContact]);
 
   useEffect(() => {
-    // Listen for new messages from the server
-    socket.on('receiveMessage', (message) => {
-      setMessages((prev) => [...prev, message]);
+    socket.on('receiveMessage', (data) => {
+      if (data.chatId === selectedContact?._id) {
+        setMessages((prev) => [...prev, data.message]);
+      }
     });
 
     return () => {
-      socket.off('receiveMessage'); // Clean up the listener when component unmounts
+      socket.off('receiveMessage');
     };
-  }, []);
+  }, [selectedContact]);
 
   const fetchContacts = async () => {
     const token = localStorage.getItem('token');
@@ -45,23 +69,29 @@ const ChatPage = () => {
       });
       setContacts(data.contacts || []);
     } catch (error) {
-      console.error('Error fetching contacts:', error.response?.data?.message || error.message);
+      console.error('Error fetching contacts:', error.message);
     }
   };
 
   const fetchMessages = async (contactId) => {
     const token = localStorage.getItem('token');
     if (!token || !contactId) return;
-
+  
     try {
       const { data } = await axios.get(`https://chat-app-backend-0idm.onrender.com/api/chats/${contactId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      setMessages(data.messages || []);
+  
+      setMessages(
+        data.messages.map((msg) => ({
+          ...msg,
+          senderName: msg.sender?.username || 'Anonymous', // Extract populated username
+        }))
+      );
     } catch (error) {
-      console.error('Error fetching messages:', error.response?.data?.message || error.message);
+      console.error('Error fetching messages:', error.message);
     }
-  };
+  };    
 
   const sendMessage = async (e) => {
     e.preventDefault();
@@ -74,20 +104,22 @@ const ChatPage = () => {
         { text: newMessage },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      setMessages((prev) => [...prev, data.message]); // Update the UI immediately
+
+      // Assuming backend returns sender details
+      setMessages((prev) => [
+        ...prev,
+        { ...data.message, senderName: data.message.sender.username || 'You' },
+      ]);
       setNewMessage('');
-      socket.emit('sendMessage', { chatId: selectedContact._id, message: data.message }); // Emit the new message
+      socket.emit('sendMessage', { chatId: selectedContact._id, message: data.message });
     } catch (error) {
-      console.error('Error sending message:', error.response?.data?.message || error.message);
+      console.error('Error sending message:', error.message);
     }
   };
 
   return (
     <div className="layout">
-      
-
       <Header />
-
       <div className="chat-container">
         <aside className="contacts-list">
           <h3>Contacts</h3>
@@ -95,9 +127,7 @@ const ChatPage = () => {
           {contacts.map((contact) => (
             <div
               key={contact._id}
-              className={`contact-item ${
-                selectedContact?._id === contact._id ? 'active' : ''
-              }`}
+              className={`contact-item ${selectedContact?._id === contact._id ? 'active' : ''}`}
               onClick={() => setSelectedContact(contact)}
             >
               {contact.username}
@@ -113,17 +143,18 @@ const ChatPage = () => {
                   <div
                     key={index}
                     className={`message ${
-                      msg.sender === 'me' ? 'my-message' : 'their-message'
+                      msg.sender === currentUser?._id ? 'my-message' : 'their-message'
                     }`}
                   >
+                    <span className="sender-name">
+                      {msg.sender === currentUser?._id ? 'You' : msg.senderName}
+                    </span>
                     <p>{msg.text}</p>
                     <span className="timestamp">
-                      {msg.timestamp
-                        ? new Date(msg.timestamp).toLocaleTimeString([], {
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })
-                        : 'Time not available'}
+                      {new Date(msg.timestamp).toLocaleTimeString([], {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
                     </span>
                   </div>
                 ))}

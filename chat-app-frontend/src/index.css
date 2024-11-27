@@ -125,14 +125,14 @@ body {
 }
 
 .my-message {
-  align-self: flex-end;
+  /* align-self: flex-end; */
   background-color: #f7cbc4;   
   color: #000;
   border-top-right-radius: 0;
 }
 
 .their-message {
-  align-self: flex-start;
+  /* align-self: flex-start; */
   background-color: #f6dfdf;
   color: #000;
   border-top-left-radius: 0;
