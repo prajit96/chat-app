@@ -17,11 +17,10 @@ function App() {
                   <ChatPage onSelectContact={(contact) => console.log(contact)}/>
                 </div>
                   }
-        />
+          />
       </Routes>
     </Router>
   );
 }
-
 
 export default App;
